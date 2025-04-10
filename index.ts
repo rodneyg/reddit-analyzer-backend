@@ -44,8 +44,7 @@ async function getAccessToken(): Promise<string> {
     const text = await res.text()
     throw new Error(`Failed to get token: ${res.status} - ${text}`)
   }
-
-  const json = await res.json()
+  const json = await res.json() as { access_token: string; expires_in: number }
   accessToken = json.access_token
   tokenExpiry = now + json.expires_in * 1000
   return accessToken
@@ -74,9 +73,8 @@ app.get('/analyze', async (req, res) => {
       const text = await response.text()
       return res.status(response.status).json({ error: text })
     }
-
-    const json = await response.json()
-    const posts = json.data?.children?.map((p: any) => p.data) || []
+    const json = await response.json() as { data: { children: { data: any }[] } }
+    const posts = json.data?.children?.map((p) => p.data) || []
 
     if (!posts.length) {
       return res.status(404).json({ error: 'No posts found' })
