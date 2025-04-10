@@ -1,0 +1,33 @@
+
+.env
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+
+# Vercel or deployment metadata (if syncing)
+.vercel/
+.env.local
+.env.*.local
+
+# IDEs
+.vscode/
+.idea/
+
+# Optional: ignore test coverage or exports
+coverage/
+*.tgz
