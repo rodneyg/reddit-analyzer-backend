@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 import cors from 'cors'
 import fetch from 'node-fetch'
 import dotenv from 'dotenv'
@@ -50,42 +50,47 @@ async function getAccessToken(): Promise<string> {
   return accessToken
 }
 
-app.get('/analyze', async (req, res) => {
-  const { subreddit, days = '30', limit = '100' } = req.query
+app.get('/analyze', (req: Request, res: Response) => {
+  void (async () => {
+    const { subreddit, days = '30', limit = '100' } = req.query
 
-  if (!subreddit) {
-    return res.status(400).json({ error: 'Subreddit is required' })
-  }
+    if (!subreddit || typeof subreddit !== 'string') {
+      res.status(400).json({ error: 'Subreddit is required' })
+      return
+    }
 
-  try {
-    const token = await getAccessToken()
+    try {
+      const token = await getAccessToken()
+      const url = `https://oauth.reddit.com/r/${subreddit}/new?limit=${limit}`
 
-    const url = `https://oauth.reddit.com/r/${subreddit}/new?limit=${limit}`
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'User-Agent': 'reddit-analyzer-script/1.0 by yourusername'
+        }
+      })
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'User-Agent': 'reddit-analyzer-script/1.0 by yourusername'
+      if (!response.ok) {
+        const text = await response.text()
+        res.status(response.status).json({ error: text })
+        return
       }
-    })
 
-    if (!response.ok) {
-      const text = await response.text()
-      return res.status(response.status).json({ error: text })
+      const json = await response.json() as { data: { children: { data: any }[] } }
+      const posts = json.data?.children?.map((p) => p.data) || []
+
+      if (!posts.length) {
+        res.status(404).json({ error: 'No posts found' })
+        return
+      }
+
+      const result = processRedditData(posts)
+      res.json(result)
+    } catch (err: any) {
+      console.error('Analysis error:', err)
+      res.status(500).json({ error: err.message || 'Internal error' })
     }
-    const json = await response.json() as { data: { children: { data: any }[] } }
-    const posts = json.data?.children?.map((p) => p.data) || []
-
-    if (!posts.length) {
-      return res.status(404).json({ error: 'No posts found' })
-    }
-
-    const result = processRedditData(posts)
-    res.json(result)
-  } catch (err: any) {
-    console.error('Analysis error:', err)
-    res.status(500).json({ error: err.message || 'Internal error' })
-  }
+  })()
 })
 
 function processRedditData(posts: any[]) {
