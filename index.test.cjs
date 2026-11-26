@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { once } = require('node:events')
+const http = require('node:http')
 const { test } = require('node:test')
 const { Response } = require('node-fetch')
 const { createApp } = require('./index.ts')
