@@ -63,8 +63,8 @@ A successful response contains `heatmapData`, `bestTimes`, and `sample`:
 
 ```json
 {
-  "heatmapData": [{ "x": 14, "y": 2, "z": 42, "day": "Tuesday", "formattedTime": "Tuesday 2PM" }],
-  "bestTimes": [{ "day": "Tuesday", "hour": 14, "score": 42, "formattedTime": "Tuesday 2PM" }],
+  "heatmapData": [{ "x": 14, "y": 2, "z": 42, "day": "Tuesday", "formattedTime": "Tuesday 2PM", "postCount": 3 }],
+  "bestTimes": [{ "day": "Tuesday", "hour": 14, "score": 42, "formattedTime": "Tuesday 2PM", "postCount": 3 }],
   "sample": {
     "postCount": 1,
     "oldestCreatedUtc": 1795701600,
@@ -74,4 +74,4 @@ A successful response contains `heatmapData`, `bestTimes`, and `sample`:
 }
 ```
 
-`heatmapData` gives average combined score and comment count for each UTC day/hour bin. `bestTimes` contains up to the three bins with the highest average. `sample` reports the number of posts analyzed, the oldest and newest post creation timestamps in Unix seconds, and whether more matching pages remained when collection stopped. An empty time window returns `404`; invalid parameters return `400`. Reddit errors are returned with their status, and timeouts return `504`.
+`heatmapData` gives average combined score, comment count, and `postCount` for each UTC day/hour bin. `bestTimes` contains up to the three bins with the highest average and the number of posts in each bin. Ranking remains based on average score. `sample` reports the number of posts analyzed, the oldest and newest post creation timestamps in Unix seconds, and whether more matching pages remained when collection stopped. An empty time window returns `404`; invalid parameters return `400`. Reddit errors are returned with their status, and timeouts return `504`.

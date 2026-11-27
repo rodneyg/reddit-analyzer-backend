@@ -58,6 +58,8 @@ test('paginates through the UTC window, includes its boundary and excludes older
   })
   assert.equal(heatmapData.length, 2)
   assert.equal(bestTimes.length, 2)
+  assert.ok(heatmapData.every(slot => Number.isInteger(slot.postCount)))
+  assert.ok(bestTimes.every(slot => Number.isInteger(slot.postCount)))
   assert.deepEqual(requests.map(url => [...url.searchParams]), [
     [['limit', '2']],
     [['limit', '2'], ['after', 't3_next']]
@@ -65,6 +67,21 @@ test('paginates through the UTC window, includes its boundary and excludes older
   assert.equal(signals.length, 3)
   assert.ok(signals[0] instanceof AbortSignal)
   assert.ok(signals.every(signal => signal === signals[0]))
+})
+
+test('reports per-slot post counts without changing average-score ranking', async t => {
+  const { request } = await setup(t, () => listing([
+    Date.parse('2026-11-24T09:00:00Z') / 1000,
+    Date.parse('2026-11-17T09:00:00Z') / 1000,
+    Date.parse('2026-11-25T16:00:00Z') / 1000,
+  ]))
+  const response = await request('subreddit=programming&days=30')
+  const { heatmapData, bestTimes } = await response.json()
+  assert.deepEqual(bestTimes.map(({ score, postCount }) => ({ score, postCount })), [
+    { score: 1, postCount: 2 },
+    { score: 1, postCount: 1 },
+  ])
+  assert.ok(heatmapData.every(slot => Number.isInteger(slot.postCount)))
 })
 
 test('returns 404 when the requested window has no posts', async t => {

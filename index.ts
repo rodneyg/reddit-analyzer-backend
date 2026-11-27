@@ -217,16 +217,16 @@ function processRedditData(posts: RedditPost[]) {
   })
 
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  const heatmapData: Array<{ x: number; y: number; z: number; day: string; formattedTime: string }> = []
-  const timeScores: Array<{ day: string; hour: number; score: number; formattedTime: string }> = []
+  const heatmapData: Array<{ x: number; y: number; z: number; day: string; formattedTime: string; postCount: number }> = []
+  const timeScores: Array<{ day: string; hour: number; score: number; formattedTime: string; postCount: number }> = []
 
   for (const key in bins) {
     const [day, hour] = key.split('-').map(Number)
     const avg = bins[key].total / bins[key].count
     const formattedHour = hour % 12 || 12
     const ampm = hour < 12 ? 'AM' : 'PM'
-    heatmapData.push({ x: hour, y: day, z: avg, day: dayNames[day], formattedTime: `${dayNames[day]} ${formattedHour}${ampm}` })
-    timeScores.push({ day: dayNames[day], hour, score: avg, formattedTime: `${dayNames[day]} ${formattedHour}${ampm}` })
+    heatmapData.push({ x: hour, y: day, z: avg, day: dayNames[day], formattedTime: `${dayNames[day]} ${formattedHour}${ampm}`, postCount: bins[key].count })
+    timeScores.push({ day: dayNames[day], hour, score: avg, formattedTime: `${dayNames[day]} ${formattedHour}${ampm}`, postCount: bins[key].count })
   }
 
   const bestTimes = timeScores.sort((a, b) => b.score - a.score).slice(0, 3)
