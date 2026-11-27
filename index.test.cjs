@@ -29,6 +29,7 @@ async function setup(t, page) {
     signals.push(options.signal)
     const url = new URL(address)
     if (url.pathname === '/api/v1/access_token') {
+      assert.match(options.headers['User-Agent'], /https:\/\/github\.com\/rodneyg\/reddit-analyzer-backend/)
       return json({ access_token: 'mock-token', expires_in: 3600 })
     }
     requests.push(url)

@@ -14,7 +14,7 @@ const {
 const MAX_PAGES = 10
 const ANALYSIS_TIMEOUT_MS = 40_000
 const SECONDS_PER_DAY = 86_400
-const USER_AGENT = 'reddit-analyzer-script/1.0 by yourusername'
+const USER_AGENT = 'reddit-analyzer-backend/1.0 (https://github.com/rodneyg/reddit-analyzer-backend)'
 
 type RedditPost = {
   created_utc: number
