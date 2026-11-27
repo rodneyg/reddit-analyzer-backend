@@ -93,7 +93,14 @@ export function createApp(fetchReddit = fetch, now = Date.now) {
           upstreamError(tokenResponse, res)
           return
         }
-        const token = await tokenResponse.json() as { access_token: string; expires_in: number }
+        const token = await tokenResponse.json() as { access_token?: unknown; expires_in?: unknown }
+        if (typeof token.access_token !== 'string' || !token.access_token.trim() ||
+          typeof token.expires_in !== 'number' || !Number.isFinite(token.expires_in) || token.expires_in <= 0) {
+          accessToken = null
+          tokenExpiry = 0
+          res.status(502).json({ error: 'Reddit authentication failed' })
+          return
+        }
         accessToken = token.access_token
         tokenExpiry = startedAt + token.expires_in * 1000
       }
@@ -103,6 +110,7 @@ export function createApp(fetchReddit = fetch, now = Date.now) {
 
       const posts: RedditPost[] = []
       let after: string | null = null
+      let retriedUnauthorized = false
       for (let page = 0; page < MAX_PAGES; page++) {
         if (after) url.searchParams.set('after', after)
         const response = await fetchReddit(url.toString(), {
@@ -113,6 +121,40 @@ export function createApp(fetchReddit = fetch, now = Date.now) {
           }
         })
 
+        if (response.status === 401 && !retriedUnauthorized) {
+          accessToken = null
+          tokenExpiry = 0
+          retriedUnauthorized = true
+          const auth = Buffer.from(`${REDDIT_CLIENT_ID}:${REDDIT_CLIENT_SECRET}`).toString('base64')
+          const tokenResponse = await fetchReddit('https://www.reddit.com/api/v1/access_token', {
+            method: 'POST',
+            signal,
+            headers: {
+              Authorization: `Basic ${auth}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'User-Agent': USER_AGENT
+            },
+            body: new URLSearchParams({
+              grant_type: 'password',
+              username: REDDIT_USERNAME!,
+              password: REDDIT_PASSWORD!
+            })
+          })
+          if (!tokenResponse.ok) {
+            upstreamError(tokenResponse, res)
+            return
+          }
+          const token = await tokenResponse.json() as { access_token?: unknown; expires_in?: unknown }
+          if (typeof token.access_token !== 'string' || !token.access_token.trim() ||
+            typeof token.expires_in !== 'number' || !Number.isFinite(token.expires_in) || token.expires_in <= 0) {
+            res.status(502).json({ error: 'Reddit authentication failed' })
+            return
+          }
+          accessToken = token.access_token
+          tokenExpiry = now() + token.expires_in * 1000
+          page--
+          continue
+        }
         if (!response.ok) {
           upstreamError(response, res)
           return

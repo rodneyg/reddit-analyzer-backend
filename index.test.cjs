@@ -125,3 +125,54 @@ test('rejects invalid subreddit, days and limit before contacting Reddit', async
   }
   assert.equal(signals.length, 0)
 })
+
+test('rejects empty tokens and invalid expiries without caching them', async t => {
+  for (const token of [
+    { access_token: '', expires_in: 3600 },
+    { access_token: '   ', expires_in: 3600 },
+    { access_token: 'mock-token', expires_in: 0 },
+    { access_token: 'mock-token', expires_in: Number.NaN }
+  ]) {
+    const requests = []
+    const app = createApp(async address => {
+      requests.push(new URL(address))
+      return json(token)
+    }, () => now)
+    const server = app.listen(0, '127.0.0.1')
+    t.after(() => server.close())
+    await once(server, 'listening')
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/analyze?subreddit=programming`)
+    assert.equal(response.status, 502)
+    assert.deepEqual(await response.json(), { error: 'Reddit authentication failed' })
+    assert.equal(requests.length, 1)
+    assert.equal(requests[0].pathname, '/api/v1/access_token')
+  }
+})
+
+test('clears a cached token after 401 and retries once with a fresh token', async t => {
+  const tokenRequests = []
+  const listingTokens = []
+  let authCount = 0
+  let listingCount = 0
+  const app = createApp(async (address, options) => {
+    const url = new URL(address)
+    if (url.pathname === '/api/v1/access_token') {
+      tokenRequests.push(url)
+      authCount++
+      return json({ access_token: `mock-token-${authCount}`, expires_in: 3600 })
+    }
+    listingTokens.push(options.headers.Authorization)
+    listingCount++
+    return listingCount === 1
+      ? json({}, { status: 401 })
+      : listing([newest - 60])
+  }, () => now)
+  const server = app.listen(0, '127.0.0.1')
+  t.after(() => server.close())
+  await once(server, 'listening')
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/analyze?subreddit=programming`)
+  assert.equal(response.status, 200)
+  assert.equal((await response.json()).sample.postCount, 1)
+  assert.equal(authCount, 2)
+  assert.deepEqual(listingTokens, ['Bearer mock-token-1', 'Bearer mock-token-2'])
+})
